@@ -283,6 +283,22 @@ async function handleAdmin(request, env, url) {
     }
     return json({ ok: true, updated });
   }
+  if (url.pathname === '/admin/api/bulk-delete' && request.method === 'POST') {
+    const body = await request.json().catch(function () { return null; });
+    if (!body || !Array.isArray(body.ids)) {
+      return json({ ok: false, error: '参数不对。' }, 400);
+    }
+    const results = [];
+    for (const id of body.ids) {
+      if (typeof id !== 'string') { results.push({ id: '', ok: false, error: '参数不对。' }); continue; }
+      const rec = await getRecord(env, id);
+      if (!rec) { results.push({ id, ok: false, error: '找不到该密码。' }); continue; }
+      await env.PWDB.delete('pw:' + id);
+      results.push({ id, ok: true });
+    }
+    const deleted = results.filter(function (r) { return r.ok; }).length;
+    return json({ ok: true, deleted, results });
+  }
   if (url.pathname === '/admin/api/bulk-change' && request.method === 'POST') {
     const body = await request.json().catch(function () { return null; });
     if (!body || !Array.isArray(body.changes)) {
@@ -381,7 +397,7 @@ function adminPage() {
     + '<div id="editBox" style="display:none"><b>正在修改：<span id="editLabel"></span></b><div class="row"><input id="editPw" type="password" placeholder="新密码（至少 4 位）" autocomplete="new-password"><label><input type="checkbox" id="showEditPw"> 显示密码</label><button id="saveEdit" type="button">保存新密码</button><button id="cancelEdit" type="button" class="ghost">取消</button></div></div>'
     + '<div id="bulkEditBox" style="display:none"><b>批量改密码</b><div id="bulkEditList"></div><div class="row"><label><input type="checkbox" id="showBulkPw"> 全部显示密码</label><button id="saveBulkEdit" type="button">保存全部</button><button id="cancelBulkEdit" type="button" class="ghost">取消</button></div></div>'
     + '<div id="msg"></div>'
-    + '<div class="row"><button id="bulkRevoke" type="button">批量停用</button><button id="bulkUnrevoke" type="button" class="ghost">批量启用</button><button id="bulkChange" type="button" class="ghost">批量改密码</button><span id="selCount"></span></div>'
+    + '<div class="row"><button id="bulkRevoke" type="button">批量停用</button><button id="bulkUnrevoke" type="button" class="ghost">批量启用</button><button id="bulkChange" type="button" class="ghost">批量改密码</button><button id="bulkDelete" type="button" class="ghost">批量删除</button><span id="selCount"></span></div>'
     + '<div class="table-wrap"><table><thead><tr><th><input type="checkbox" id="selAll"></th><th>名称</th><th>密码</th><th>已用 / 最多</th><th>状态</th><th>创建时间</th><th>操作</th></tr></thead><tbody id="rows"></tbody></table></div>'
     + '<p><a href="/admin/logout">退出管理</a> · <a href="/">回航线页</a></p>'
     + '</div><script>'
@@ -436,6 +452,20 @@ function adminPage() {
     + '}'
     + 'document.getElementById("bulkRevoke").addEventListener("click", function(){ bulkSet(true); });'
     + 'document.getElementById("bulkUnrevoke").addEventListener("click", function(){ bulkSet(false); });'
+    + 'document.getElementById("bulkDelete").addEventListener("click", function(){'
+    + '  var ids = selectedIds();'
+    + '  if(!ids.length){ msg.textContent = "请先勾选要删除的密码。"; return; }'
+    + '  if(!confirm("确定删除选中的 " + ids.length + " 个密码吗？删除后用它们再也登不进来了，这个操作不能撤销。")) return;'
+    + '  fetch("/admin/api/bulk-delete", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({ids: ids})}).then(function(r){ return r.json(); }).then(function(res){'
+    + '    if(res.ok){'
+    + '      var failed = (res.results || []).filter(function(x){ return !x.ok; });'
+    + '      if(failed.length){ msg.textContent = "已删除 " + res.deleted + " 个，有 " + failed.length + " 个失败：" + failed.map(function(x){ return x.error || "失败"; }).join("；"); }'
+    + '      else { msg.textContent = "已删除 " + res.deleted + " 个密码。"; }'
+    + '      load();'
+    + '    }'
+    + '    else { msg.textContent = res.error || "操作失败。"; }'
+    + '  });'
+    + '});'
     + 'document.getElementById("bulkChange").addEventListener("click", function(){'
     + '  var ids = selectedIds();'
     + '  if(!ids.length){ msg.textContent = "请先勾选要改密码的账号。"; return; }'
