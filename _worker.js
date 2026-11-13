@@ -77,7 +77,7 @@ async function handleLogin(request, env) {
   const rec = await getRecord(env, h);
   if (!rec) return loginFail('密码不对，请重试。');
   if (rec.revoked) return loginFail('该密码已被停用。');
-  if ((rec.uses || 0) >= (rec.maxUses || MAX_USES)) return loginFail('该密码使用次数已用完（最多3次）。');
+  if ((rec.uses || 0) >= (rec.maxUses || MAX_USES)) return loginFail('该密码使用次数已用完（最多3次），请加 QQ 281698989 联系我。');
   rec.uses = (rec.uses || 0) + 1;
   await putRecord(env, h, rec);
   return new Response(null, {
