@@ -333,6 +333,24 @@ async function handleAdmin(request, env, url) {
     const updated = results.filter(function (r) { return r.ok; }).length;
     return json({ ok: true, updated, results });
   }
+  if (url.pathname === '/admin/api/bulk-reset' && request.method === 'POST') {
+    const body = await request.json().catch(function () { return null; });
+    if (!body || !Array.isArray(body.ids)) {
+      return json({ ok: false, error: '参数不对。' }, 400);
+    }
+    const results = [];
+    for (const id of body.ids) {
+      if (typeof id !== 'string') { results.push({ id: '', ok: false, error: '参数不对。' }); continue; }
+      const rec = await getRecord(env, id);
+      if (!rec) { results.push({ id, ok: false, error: '找不到该密码。' }); continue; }
+      // Reset activation count to 0; password, label, revoked and createdAt stay as-is.
+      rec.uses = 0;
+      await putRecord(env, id, rec);
+      results.push({ id, ok: true });
+    }
+    const updated = results.filter(function (r) { return r.ok; }).length;
+    return json({ ok: true, updated, results });
+  }
   return new Response('Not found', { status: 404 });
 }
 
@@ -397,12 +415,12 @@ function adminPage() {
     + '@media (max-width:640px){body{padding:12px}.wrap{padding:16px}table{font-size:14px;min-width:640px}th,td{padding:8px 6px}button{padding:9px 12px;font-size:14px}form input{min-width:0}h1{font-size:18px}}'
     + '</style></head><body><div class="wrap">'
     + '<h1>密码管理</h1>'
-    + '<p>每个密码最多登录 3 次，第 4 次输密码就进不去了。登录后 1 天内不用重复输密码。点“停用”后该密码立刻不能再用（已登录的设备也会被踢出）。密码直接显示在列表里，只有登录了管理页才能看到。改密码会保留已用次数，旧密码立即失效；忘了某个密码就删掉重加一个。</p>'
+    + '<p>每个密码最多登录 3 次，第 4 次输密码就进不去了。登录后 1 天内不用重复输密码。点“停用”后该密码立刻不能再用（已登录的设备也会被踢出）。密码直接显示在列表里，只有登录了管理页才能看到。改密码会保留已用次数，旧密码立即失效；忘了某个密码就删掉重加一个。点“批量重置”会把选中账号的已用次数清零（恢复到 0 / 3），密码本身不变。</p>'
     + '<form id="addForm"><input name="label" placeholder="名称（例如：朋友A）" required><input id="addPw" name="password" type="password" placeholder="密码（至少 4 位）" required autocomplete="new-password"><label><input type="checkbox" id="showAddPw"> 显示密码</label><button type="submit">添加密码</button></form>'
     + '<div id="editBox" style="display:none"><b>正在修改：<span id="editLabel"></span></b><div class="row"><input id="editPw" type="password" placeholder="新密码（至少 4 位）" autocomplete="new-password"><label><input type="checkbox" id="showEditPw"> 显示密码</label><button id="saveEdit" type="button">保存新密码</button><button id="cancelEdit" type="button" class="ghost">取消</button></div></div>'
     + '<div id="bulkEditBox" style="display:none"><b>批量改密码</b><div id="bulkEditList"></div><div class="row"><label><input type="checkbox" id="showBulkPw"> 全部显示密码</label><button id="saveBulkEdit" type="button">保存全部</button><button id="cancelBulkEdit" type="button" class="ghost">取消</button></div></div>'
     + '<div id="msg"></div>'
-    + '<div class="row"><button id="bulkRevoke" type="button">批量停用</button><button id="bulkUnrevoke" type="button" class="ghost">批量启用</button><button id="bulkChange" type="button" class="ghost">批量改密码</button><button id="bulkDelete" type="button" class="ghost">批量删除</button><span id="selCount"></span></div>'
+    + '<div class="row"><button id="bulkRevoke" type="button">批量停用</button><button id="bulkUnrevoke" type="button" class="ghost">批量启用</button><button id="bulkChange" type="button" class="ghost">批量改密码</button><button id="bulkReset" type="button" class="ghost">批量重置</button><button id="bulkDelete" type="button" class="ghost">批量删除</button><span id="selCount"></span></div>'
     + '<div class="table-wrap"><table><thead><tr><th><input type="checkbox" id="selAll"></th><th>名称</th><th>密码</th><th>已用 / 最多</th><th>状态</th><th>创建时间</th><th>操作</th></tr></thead><tbody id="rows"></tbody></table></div>'
     + '<p><a href="/admin/logout">退出管理</a> · <a href="/">回航线页</a></p>'
     + '</div><script>'
@@ -466,6 +484,20 @@ function adminPage() {
     + '      var failed = (res.results || []).filter(function(x){ return !x.ok; });'
     + '      if(failed.length){ msg.textContent = "已删除 " + res.deleted + " 个，有 " + failed.length + " 个失败：" + failed.map(function(x){ return x.error || "失败"; }).join("；"); }'
     + '      else { msg.textContent = "已删除 " + res.deleted + " 个密码。"; }'
+    + '      load();'
+    + '    }'
+    + '    else { msg.textContent = res.error || "操作失败。"; }'
+    + '  });'
+    + '});'
+    + 'document.getElementById("bulkReset").addEventListener("click", function(){'
+    + '  var ids = selectedIds();'
+    + '  if(!ids.length){ msg.textContent = "请先勾选要重置的密码。"; return; }'
+    + '  if(!confirm("确定把选中的 " + ids.length + " 个密码的已用次数清零吗？清零后它们又可以登录 3 次，密码本身不变。")) return;'
+    + '  fetch("/admin/api/bulk-reset", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({ids: ids})}).then(function(r){ return r.json(); }).then(function(res){'
+    + '    if(res.ok){'
+    + '      var failed = (res.results || []).filter(function(x){ return !x.ok; });'
+    + '      if(failed.length){ msg.textContent = "已重置 " + res.updated + " 个，有 " + failed.length + " 个失败：" + failed.map(function(x){ return x.error || "失败"; }).join("；"); }'
+    + '      else { msg.textContent = "已重置 " + res.updated + " 个密码的已用次数（恢复到 0 / 3）。"; }'
     + '      load();'
     + '    }'
     + '    else { msg.textContent = res.error || "操作失败。"; }'
