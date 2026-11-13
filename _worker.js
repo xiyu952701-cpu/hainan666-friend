@@ -223,7 +223,12 @@ async function handleAdmin(request, env, url) {
       return json({ ok: false, error: '密码至少 4 位。' }, 400);
     }
     const h = await sha256(body.password);
-    if (await env.PWDB.get('pw:' + h)) {
+    // Check duplicates against the same list the admin page shows, not a raw
+    // KV get: after a delete, KV list and KV get can disagree briefly (eventual
+    // consistency), which used to show an empty list while add still said
+    // "already exists". The list is what the user sees, so it decides.
+    const existing = await listRecords(env);
+    if (existing.some(function (r) { return r.id === h; })) {
       return json({ ok: false, error: '这个密码已经存在。' }, 400);
     }
     await env.PWDB.put('pw:' + h, JSON.stringify({
@@ -516,7 +521,7 @@ function adminPage() {
     + '  var password = f.elements.password.value;'
     + '  fetch("/admin/api/add", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({label: label, password: password})}).then(function(r){ return r.json(); }).then(function(res){'
     + '    if(res.ok){ msg.textContent = "已添加。"; f.reset(); load(); }'
-    + '    else { msg.textContent = res.error || "添加失败。"; }'
+    + '    else { msg.textContent = res.error || "添加失败。"; load(); }'
     + '  });'
     + '});'
     + 'load();'
