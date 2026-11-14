@@ -9,6 +9,11 @@
 // Login cookie "h666" = sha256(password), 1 day. Each successful login consumes
 // one use; an existing session keeps working until the cookie expires, but
 // revoking a password blocks it immediately (checked on every request).
+// Login wall switch: KV key "meta:login_required" = '1' means the password wall
+// is ON (visitors must log in); '0' or missing means OFF (anyone can open the
+// page, no login needed). Toggle it anytime from /admin (top of the page) —
+// no redeploy needed. The password system stays intact while the wall is off.
+// /admin itself always needs the admin password, wall on or off.
 
 const MAX_USES = 3;
 const COOKIE_DAYS = 1;
@@ -49,6 +54,10 @@ async function handle(request, env) {
     return plain503('后台存储未配置，请联系管理员配置后再访问。');
   }
   await migrateLegacy(env);
+
+  if (!(await loginRequired(env))) {
+    return env.ASSETS.fetch(request);
+  }
 
   const h = cookieVal(request, 'h666');
   if (h) {
@@ -139,6 +148,13 @@ async function listRecords(env) {
   return out;
 }
 
+/* Is the password wall on? Only an explicit '1' in KV turns it on;
+   missing key or '0' = public, no login needed. */
+async function loginRequired(env) {
+  const v = await env.PWDB.get('meta:login_required');
+  return v === '1';
+}
+
 /* Import the old single FRIEND_PASSWORD once, so the current friend keeps working. */
 async function migrateLegacy(env) {
   if (!env.PWDB || !env.FRIEND_PASSWORD) return;
@@ -212,6 +228,17 @@ async function handleAdmin(request, env, url) {
   }
   if (url.pathname === '/admin/api/list' && request.method === 'GET') {
     return json(await listRecords(env));
+  }
+  if (url.pathname === '/admin/api/settings' && request.method === 'GET') {
+    return json({ loginRequired: await loginRequired(env) });
+  }
+  if (url.pathname === '/admin/api/toggle-login' && request.method === 'POST') {
+    const body = await request.json().catch(function () { return null; });
+    if (!body || typeof body.required !== 'boolean') {
+      return json({ ok: false, error: '参数不对。' }, 400);
+    }
+    await env.PWDB.put('meta:login_required', body.required ? '1' : '0');
+    return json({ ok: true, loginRequired: body.required });
   }
   if (url.pathname === '/admin/api/add' && request.method === 'POST') {
     const body = await request.json().catch(function () { return null; });
@@ -439,6 +466,7 @@ function adminPage() {
     + '</style></head><body><div class="wrap">'
     + '<h1>密码管理</h1>'
     + '<p>每个密码最多登录 3 次，第 4 次输密码就进不去了。登录后 1 天内不用重复输密码。点“停用”后该密码立刻不能再用（已登录的设备也会被踢出）。密码直接显示在列表里，只有登录了管理页才能看到。改密码会保留已用次数，旧密码立即失效；忘了某个密码就删掉重加一个。点“批量重置”会把选中账号的已用次数清零（恢复到 0 / 3），密码本身不变。</p>'
+    + '<div id="loginBox" style="background:#f7f7f5;border:1px solid #e3e3e0;border-radius:8px;padding:12px;margin:12px 0"><b>登录保护：<span id="loginState">…</span></b><p style="margin:6px 0">关闭后，任何人打开网址都能直接看航线页，不用输密码；密码系统还留着，随时可以在这里重新开启。管理页本身一直要输管理密码才能进。</p><button id="toggleLogin" type="button">…</button></div>'
     + '<form id="addForm"><input name="label" placeholder="名称（例如：朋友A）" required><input id="addPw" name="password" type="password" placeholder="密码（至少 4 位）" required autocomplete="new-password"><label><input type="checkbox" id="showAddPw"> 显示密码</label><button type="submit">添加密码</button></form>'
     + '<div id="editBox" style="display:none"><b>正在修改：<span id="editLabel"></span></b><div class="row"><input id="editPw" type="password" placeholder="新密码（至少 4 位）" autocomplete="new-password"><label><input type="checkbox" id="showEditPw"> 显示密码</label><button id="saveEdit" type="button">保存新密码</button><button id="cancelEdit" type="button" class="ghost">取消</button></div></div>'
     + '<div id="bulkEditBox" style="display:none"><b>批量改密码</b><div id="bulkEditList"></div><div class="row"><label><input type="checkbox" id="showBulkPw"> 全部显示密码</label><button id="saveBulkEdit" type="button">保存全部</button><button id="cancelBulkEdit" type="button" class="ghost">取消</button></div></div>'
@@ -453,6 +481,7 @@ function adminPage() {
     + 'var currentList = [];'
     + 'function esc(s){ return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }'
     + 'function load(){'
+    + '  fetch("/admin/api/settings").then(function(r){ return r.json(); }).then(function(st){ var on = !!st.loginRequired; document.getElementById("loginState").textContent = on ? "已开启（要输密码才能看）" : "已关闭（不用登录就能看）"; document.getElementById("toggleLogin").textContent = on ? "关闭登录保护" : "开启登录保护"; }).catch(function(){ document.getElementById("loginState").textContent = "读取失败"; });'
     + '  fetch("/admin/api/list").then(function(r){ return r.json(); }).then(function(list){'
     + '    currentList = list;'
     + '    if(!list.length){ rows.innerHTML = "<tr><td colspan=\\"7\\">还没有密码，先在上面添加一个。</td></tr>"; return; }'
@@ -477,6 +506,11 @@ function adminPage() {
     + '  if(act === "change"){ startEdit(id, b.getAttribute("data-label")); return; }'
     + '  if(act === "delete" && !confirm("确定删除这个密码吗？删除后用它再也登不进来了。")) return;'
     + '  fetch("/admin/api/" + act, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({id: id})}).then(function(){ load(); });'
+    + '});'
+    + 'document.getElementById("toggleLogin").addEventListener("click", function(){'
+    + '  fetch("/admin/api/settings").then(function(r){ return r.json(); }).then(function(st){'
+    + '    return fetch("/admin/api/toggle-login", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({required: !st.loginRequired})});'
+    + '  }).then(function(r){ return r.json(); }).then(function(res){ if(res.ok){ load(); } else { msg.textContent = res.error || "切换失败。"; } }).catch(function(){ msg.textContent = "切换失败，请刷新重试。"; });'
     + '});'
     + 'function startEdit(id, label){ editingId = id; document.getElementById("editLabel").textContent = label; document.getElementById("editPw").value = ""; document.getElementById("editBox").style.display = "block"; document.getElementById("editPw").focus(); }'
     + 'document.getElementById("cancelEdit").addEventListener("click", function(){ editingId = null; document.getElementById("editBox").style.display = "none"; });'
