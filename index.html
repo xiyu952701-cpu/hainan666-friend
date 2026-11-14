@@ -234,19 +234,19 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:now
     <summary>使用说明（先看这里）</summary>
     <div class="body" id="howtoHainan">
       <ul>
-        <li><b>查航线：</b>左边选直飞航线，右边查一次中转；选好航线后在两个月价格日历里点日期，日历按「不屏蔽 + 提前满 3 天」判定，价格为 199 元权益价加税费的单程总价。</li>
+        <li><b>查航线：</b>左边选直飞航线，右边查一次或二次中转；选好航线后在两个月价格日历里点日期，日历按「不屏蔽 + 提前满 3 天」判定，价格为 199 元权益价加税费的单程总价。</li>
         <li><b>666 档</b>只认 20:00–次日 08:00 起飞的航班，<b>2666 档</b>认 19:00–次日 09:00；日历只按日期规则判定，<b>不代表当天一定有落在时段内的航班</b>，下单前务必在 App 里核对当天航班时刻。</li>
-        <li><b>中转</b>是两段目录航线拼接，每段单独判定，合计 = 两段总价相加，算 2 个航段；衔接时间在 App 里核对。</li>
+        <li><b>中转</b>是两段或三段目录航线拼接，每段单独判定，合计 = 各段总价相加，一次中转算 2 个航段、二次中转算 3 个航段；衔接时间在 App 里核对。</li>
         <li>除页面注明已核实的航班外，一律不写起飞/落地时刻，统一以 App 为准。</li>
         <li>本页是静态文件：刷新即重置，不保存任何输入，也不会自动更新数据。</li>
       </ul>
     </div>
     <div class="body hidden" id="howtoLoong">
       <ul>
-        <li><b>查航线：</b>左边选直飞航线，右边查一次中转；选好航线后在两个月价格日历里点日期，日历按「在五段适用日期内 + 提前满 3 天」判定，价格为当前阶梯票面价加税费的单程总价。</li>
+        <li><b>查航线：</b>左边选直飞航线，右边查一次或二次中转；选好航线后在两个月价格日历里点日期，日历按「在五段适用日期内 + 提前满 3 天」判定，价格为当前阶梯票面价加税费的单程总价。</li>
         <li><b>阶梯价</b>按实际飞完次数解锁：0–4次 266元，5–10次 199元，11–20次 129元，21次以上 99元；上方「已飞次数」可切换，价格跟着变。</li>
         <li><b>长龙全时段可飞</b>，没有起飞时段限制；只看日期在不在五段适用日期内。</li>
-        <li><b>中转</b>是两段目录航线拼接，每段单独判定，合计 = 两段总价相加，算 2 个航段；衔接时间在 App 里核对。</li>
+        <li><b>中转</b>是两段或三段目录航线拼接，每段单独判定，合计 = 各段总价相加，一次中转算 2 个航段、二次中转算 3 个航段；衔接时间在 App 里核对。</li>
         <li>除页面注明已核实的航班外，一律不写起飞/落地时刻，统一以长龙官网 / 飞猪 App 为准。</li>
         <li>本页是静态文件：刷新即重置，不保存任何输入，也不会自动更新数据。</li>
       </ul>
@@ -299,8 +299,8 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:now
       </div>
 
       <div class="panel" id="transferPanel">
-        <h2><span class="tag">中转</span>中转查询 · 一次中转</h2>
-        <p class="hint">没有直飞时用：从左侧的出发城市出发，经一个枢纽拼两段。目的地可搜目录全部城市。</p>
+        <h2><span class="tag">中转</span>中转查询 · 一次或二次中转</h2>
+        <p class="hint">没有直飞时用：从左侧的出发城市出发，经一个或两个枢纽拼两段或三段。目的地可搜目录全部城市。</p>
         <div class="field"><label for="transferInput">中转目的地（输城市名 / 机场 / 三字码）</label>
           <div class="searchbox"><input id="transferInput" type="text" autocomplete="off" placeholder="如：阿勒泰 / AAT"><div class="dropdown hidden" id="transferDrop"></div></div>
         </div>
@@ -312,7 +312,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:now
     <div id="schemesWrap" class="hidden">
       <div class="schemes-head" id="schemesHead"></div>
       <div class="schemes" id="schemes"></div>
-      <p class="cal-note" id="transferNote">中转按两段目录航线拼接：每段单独按时段、屏蔽日期与提前 3 天判定；两段合计价 = 两段单程总价相加，计 2 个航段。页面不核实两段之间的衔接时间与当天实际航班，订票前在 App 里逐段确认。</p>
+      <p class="cal-note" id="transferNote">中转按两段或三段目录航线拼接：每段单独按时段、屏蔽日期与提前 3 天判定；合计价 = 各段单程总价相加，一次中转计 2 个航段、二次中转计 3 个航段。页面不核实各段之间的衔接时间与当天实际航班，订票前在 App 里逐段确认。</p>
     </div>
   </section>
 
@@ -518,11 +518,12 @@ function legState(route,s){
   if(route.tier==="2666") return {st:"only",label:"仅2666",reason:""};
   return {st:"ok",label:"¥"+route.total,reason:""};
 }
-function combineState(l1,l2,s){
-  var a=legState(l1,s), b=legState(l2,s), tot=l1.total+l2.total;
-  var bad=[a,b].filter(function(x){return x.st==="off"||x.st==="soon"||x.st==="out";});
+function combineState(legs,s){
+  var tot=0, sts=legs.map(function(l){ return legState(l,s); });
+  legs.forEach(function(l){ tot+=l.total; });
+  var bad=sts.filter(function(x){return x.st==="off"||x.st==="soon"||x.st==="out";});
   if(bad.length) return {st:bad[0].st,label:bad[0].st==="out"?"":bad[0].label,reason:bad[0].reason,total:tot};
-  if(a.st==="only"||b.st==="only") return {st:"only",label:"仅2666",reason:"",total:tot};
+  if(sts.some(function(x){return x.st==="only";})) return {st:"only",label:"仅2666",reason:"",total:tot};
   return {st:"ok",label:"¥"+tot,reason:"",total:tot};
 }
 
@@ -593,7 +594,7 @@ function monthLow(routeOrFn,y,m,mode){
   for(var d=1;d<=days;d++){
     var s=y+"-"+pad(m+1)+"-"+pad(d);
     if(s<TODAY_S||s>MAX_S) continue;
-    var st = mode==="combo" ? combineState(routeOrFn[0],routeOrFn[1],s) : legState(routeOrFn,s);
+    var st = mode==="combo" ? combineState(routeOrFn,s) : legState(routeOrFn,s);
     if(st.st==="ok"||st.st==="only"){ var v = mode==="combo"? st.total : routeOrFn.total; if(best===null||v<best) best=v; }
   }
   return best;
@@ -745,21 +746,46 @@ function renderReturn(outRoute){
 }
 
 /* ---------- transfer ---------- */
+var MAX_TRANSFER_SCHEMES=6;
+function schemeTier(legs){ return legs.some(function(l){return l.tier==="2666";})?"2666":"both"; }
 function transferSchemes(from,dest){
-  var out=[], seen={};
+  var one=[], seen1={};
   (byFrom[from]||[]).forEach(function(l1){
     var hub=l1.toCity; if(hub===dest||hub===from) return;
     var l2=routeBetween(hub,dest); if(!l2) return;
-    var key=hub; if(seen[key]) return; seen[key]=1;
-    out.push({hub:hub,leg1:l1,leg2:l2,total:l1.total+l2.total,tier:(l1.tier==="2666"||l2.tier==="2666")?"2666":"both"});
+    if(seen1[hub]) return; seen1[hub]=1;
+    var legs=[l1,l2];
+    one.push({legs:legs,hubs:[hub],total:l1.total+l2.total,tier:schemeTier(legs),transfers:1});
   });
-  out.sort(function(a,b){return a.total-b.total;});
-  return out;
+  one.sort(function(a,b){return a.total-b.total;});
+  var two=[], seen2={};
+  (byFrom[from]||[]).forEach(function(l1){
+    var h1=l1.toCity; if(h1===dest||h1===from) return;
+    (byFrom[h1]||[]).forEach(function(l2){
+      var h2=l2.toCity; if(h2===dest||h2===from||h2===h1) return;
+      var l3=routeBetween(h2,dest); if(!l3) return;
+      var key=h1+"|"+h2; if(seen2[key]) return; seen2[key]=1;
+      var legs=[l1,l2,l3];
+      two.push({legs:legs,hubs:[h1,h2],total:l1.total+l2.total+l3.total,tier:schemeTier(legs),transfers:2});
+    });
+  });
+  two.sort(function(a,b){return a.total-b.total;});
+  var total=one.length+two.length;
+  var list=one.slice(0,MAX_TRANSFER_SCHEMES);
+  if(list.length<MAX_TRANSFER_SCHEMES) list=list.concat(two.slice(0,MAX_TRANSFER_SCHEMES-list.length));
+  return {list:list,total:total};
 }
 function transferDests(from){
   var set={};
-  (byFrom[from]||[]).forEach(function(l1){ (byFrom[l1.toCity]||[]).forEach(function(l2){ if(l2.toCity!==from && !routeBetween(from,l2.toCity)) set[l2.toCity]=1; else if(l2.toCity!==from) set[l2.toCity]=1; }); });
-  /* include dests that also have a direct flight? Original: transfer dropdown lists all reachable via one transfer. Keep all transfer-reachable. */
+  (byFrom[from]||[]).forEach(function(l1){
+    (byFrom[l1.toCity]||[]).forEach(function(l2){
+      if(l2.toCity!==from) set[l2.toCity]=1;
+      (byFrom[l2.toCity]||[]).forEach(function(l3){
+        if(l3.toCity!==from && l3.toCity!==l1.toCity) set[l3.toCity]=1;
+      });
+    });
+  });
+  /* transfer dropdown lists all destinations reachable via one or two transfers (even if a direct flight also exists). */
   return Object.keys(set).sort();
 }
 var tInput=document.getElementById("transferInput");
@@ -767,8 +793,14 @@ attachSearch(tInput,document.getElementById("transferDrop"),
   function(q){
     var reach=transferDests(S.from), reachSet={}; reach.forEach(function(c){reachSet[c]=1;});
     return matchCity(q,Object.keys(allCities).sort()).map(function(c){
-      var sch=reachSet[c]?transferSchemes(S.from,c):[];
-      return {main:c,code:cityCodes[c]||"",city:c,meta: sch.length?("经 "+sch.map(function(x){return x.hub;}).join(" / ")+" · "+(CUR==="loong"?"长龙可用":(sch[0].tier==="2666"?"仅2666":"两档"))) : "无中转路线"};
+      var res=reachSet[c]?transferSchemes(S.from,c):{list:[],total:0};
+      var one=res.list.filter(function(x){return x.transfers===1;});
+      var two=res.list.filter(function(x){return x.transfers===2;});
+      var tierTxt=function(sch){ return CUR==="loong"?"长龙可用":(sch.tier==="2666"?"仅2666":"两档"); };
+      var meta="无中转路线";
+      if(one.length) meta="经 "+one.map(function(x){return x.hubs[0];}).join(" / ")+" · "+tierTxt(one[0])+(two.length?" · 另有二次中转":"");
+      else if(two.length) meta="二次中转 经 "+two[0].hubs.join("→")+" · "+tierTxt(two[0]);
+      return {main:c,code:cityCodes[c]||"",city:c,meta:meta};
     });
   },
   function(it){ S.tDest=it.city; tInput.value=cityLabel(it.city); S.schemeIdx=0; S.legOff={}; renderTransfer(); });
@@ -776,40 +808,42 @@ attachSearch(tInput,document.getElementById("transferDrop"),
 function renderTransfer(){
   var res=document.getElementById("transferResult"), cal=document.getElementById("transferCal"),
       wrap=document.getElementById("schemesWrap"), schemesEl=document.getElementById("schemes"), head=document.getElementById("schemesHead");
-  if(!S.tDest){ res.innerHTML='<div class="resultline">先输入中转目的地。下面会列出从 '+cityLabel(S.from)+' 经一次中转能到的方案。</div>'; cal.innerHTML=""; wrap.classList.add("hidden"); return; }
-  var schemes=transferSchemes(S.from,S.tDest);
+  if(!S.tDest){ res.innerHTML='<div class="resultline">先输入中转目的地。下面会列出从 '+cityLabel(S.from)+' 经一次或二次中转能到的方案。</div>'; cal.innerHTML=""; wrap.classList.add("hidden"); return; }
+  var schRes=transferSchemes(S.from,S.tDest), schemes=schRes.list;
   if(!schemes.length){
-    res.innerHTML='<div class="resultline"><span class="big">'+S.from+' → '+S.tDest+'</span><br><b>'+(CUR==="loong"?"该目的地暂无长龙中转路线":"该目的地暂无 666/2666 中转路线")+'</b>（从 '+S.from+' 出发，经一次中转拼不到两段都在目录里的航线）。</div>';
+    res.innerHTML='<div class="resultline"><span class="big">'+S.from+' → '+S.tDest+'</span><br><b>'+(CUR==="loong"?"该目的地暂无长龙中转路线":"该目的地暂无 666/2666 中转路线")+'</b>（从 '+S.from+' 出发，经一次或二次中转拼不到都在目录里的航线）。</div>';
     cal.innerHTML=""; wrap.classList.add("hidden"); return;
   }
   if(S.schemeIdx>=schemes.length) S.schemeIdx=0;
   var sc=schemes[S.schemeIdx];
-  var cst=combineState(sc.leg1,sc.leg2,S.tDate);
-  res.innerHTML='<div class="resultline"><span class="big">'+S.from+' → '+S.tDest+' · 中转价格日历</span><br>已选方案：经 '+sc.hub+' · '+fmtDate(S.tDate)+' · 两段合计 <span class="price">¥'+cst.total+'</span> '
-    +(cst.st==="ok"?'<span class="pill ok">两段均可兑</span>':cst.st==="only"?'<span class="pill only">仅 2666 可用</span>':cst.st==="soon"?'<span class="pill no">未满提前3天</span>':cst.st==="off"?'<span class="pill no">'+(CUR==="loong"?"不在适用日期内":"屏蔽日期 · 禁用")+'</span>':'<span class="pill no">不在60天窗口内</span>')
-    +'<br><span style="color:var(--muted)">共 '+schemes.length+' 个中转方案，在下方方案卡里切换；合计日历显示两段合计总价。</span></div>';
+  var nLegs=sc.legs.length;
+  var cst=combineState(sc.legs,S.tDate);
+  res.innerHTML='<div class="resultline"><span class="big">'+S.from+' → '+S.tDest+' · 中转价格日历</span><br>已选方案：经 '+sc.hubs.join(" → ")+' · '+fmtDate(S.tDate)+' · '+nLegs+' 段合计 <span class="price">¥'+cst.total+'</span> '
+    +(cst.st==="ok"?'<span class="pill ok">'+nLegs+' 段均可兑</span>':cst.st==="only"?'<span class="pill only">仅 2666 可用</span>':cst.st==="soon"?'<span class="pill no">未满提前3天</span>':cst.st==="off"?'<span class="pill no">'+(CUR==="loong"?"不在适用日期内":"屏蔽日期 · 禁用")+'</span>':'<span class="pill no">不在60天窗口内</span>')
+    +'<br><span style="color:var(--muted)">共 '+schemes.length+' 个中转方案，在下方方案卡里切换；合计日历显示所选方案的 '+nLegs+' 段合计总价。</span></div>';
   renderCalendar(cal,{
     offset:S.tOff, maxOffset:maxMonthOffset(), selected:S.tDate, stack:false,
-    stateFn:function(s){return combineState(sc.leg1,sc.leg2,s);},
-    priceLabel:function(s){return "¥"+combineState(sc.leg1,sc.leg2,s).total;},
-    lowFn:function(y,m){return monthLow([sc.leg1,sc.leg2],y,m,"combo");},
+    stateFn:function(s){return combineState(sc.legs,s);},
+    priceLabel:function(s){return "¥"+combineState(sc.legs,s).total;},
+    lowFn:function(y,m){return monthLow(sc.legs,y,m,"combo");},
     onSelect:function(s){ S.tDate=s; renderTransfer(); },
     onNav:function(o){ S.tOff=clampOff(o); renderTransfer(); }
   });
   /* scheme cards */
   wrap.classList.remove("hidden");
-  head.textContent="中转方案 · "+S.from+" → "+S.tDest+"（共 "+schemes.length+" 条）";
+  head.textContent="中转方案 · "+S.from+" → "+S.tDest+"（共 "+schRes.total+" 条"+(schRes.total>schemes.length?"，显示最便宜的 "+schemes.length+" 条":"")+"）";
   schemesEl.className="schemes"+(schemes.length>1?" two":"");
   schemesEl.innerHTML="";
   schemes.forEach(function(sch,idx){
     var card=document.createElement("div");
     card.className="scheme"+(idx===S.schemeIdx?" selected":"");
-    var st2=combineState(sch.leg1,sch.leg2,S.tDate);
-    var h='<h3>'+S.from+' — '+sch.hub+' — '+S.tDest+'</h3>'
-      +'<div class="combo">两段合计 <span class="price">¥'+sch.total+'</span> · '+fmtDate(S.tDate)+' '
-      +(st2.st==="ok"?'<span class="pill ok">两段均可兑</span>':st2.st==="only"?'<span class="pill only">仅 2666</span>':st2.st==="soon"?'<span class="pill no">未满3天</span>':'<span class="pill no">当天不可用</span>')
+    var st2=combineState(sch.legs,S.tDate);
+    var nL=sch.legs.length;
+    var h='<h3>'+[S.from].concat(sch.hubs,[S.tDest]).join(" — ")+'</h3>'
+      +'<div class="combo">'+nL+' 段合计 <span class="price">¥'+sch.total+'</span> · '+fmtDate(S.tDate)+' '
+      +(st2.st==="ok"?'<span class="pill ok">'+nL+' 段均可兑</span>':st2.st==="only"?'<span class="pill only">仅 2666</span>':st2.st==="soon"?'<span class="pill no">未满3天</span>':'<span class="pill no">当天不可用</span>')
       +' <span style="color:var(--muted);font-weight:400;font-size:13px">'+(idx===S.schemeIdx?"已选 · 日历跟随此方案":"点此卡切换方案")+'</span></div>';
-    [sch.leg1,sch.leg2].forEach(function(leg,li){
+    sch.legs.forEach(function(leg,li){
       var lst=legState(leg,S.tDate);
       h+='<div class="leg"><h4>第 '+(li+1)+' 段：'+leg.fromCity+'（'+leg.fromCode+'）→ '+leg.toCity+'（'+leg.toCode+'）</h4>'
         +'<div class="meta">'+leg.airline+' · '+leg.category+' · 约 '+leg.distanceKm+' km · 单程总价 ¥'+leg.total+'（'+(CUR==="loong"?loongTicket():199)+' + 税费 '+leg.tax+'）· '+(CUR==="loong"?"长龙畅飞卡 · 全时段":(leg.tier==="2666"?"仅 2666":"666 / 2666 两档"))+(leg.expired?' · <span class="badge-expired">窗口已过 '+(leg.window||"")+'</span> 当前是否可用以 App 为准':"")+'</div>'
@@ -825,7 +859,7 @@ function renderTransfer(){
   });
   /* leg calendars (stacked months, synced) */
   schemes.forEach(function(sch,idx){
-    [sch.leg1,sch.leg2].forEach(function(leg,li){
+    sch.legs.forEach(function(leg,li){
       var el=document.getElementById("legcal-"+idx+"-"+li); if(!el) return;
       var key=idx+"-"+li; if(!(key in S.legOff)) S.legOff[key]=0;
       renderCalendar(el,{
@@ -956,8 +990,8 @@ function switchProduct(key){
     ? "选出发城市和起飞日期，下面列出那天按日期规则可用的全部目的地（绿色 = 可兑换）。长龙只看适用日期，不分时段；是否真有航班，以长龙官网 / App 为准。"
     : "选出发城市和起飞日期，下面列出那天按日期规则可用的全部目的地（绿色 = 两档可用，黄色 = 仅 2666）。是否真有落在时段内的航班，以 App 为准。";
   document.getElementById("transferNote").textContent = key==="loong"
-    ? "中转按两段目录航线拼接：每段单独按适用日期与提前 3 天判定；两段合计价 = 两段单程总价相加，计 2 个航段。页面不核实两段之间的衔接时间与当天实际航班，订票前在 App 里逐段确认。"
-    : "中转按两段目录航线拼接：每段单独按时段、屏蔽日期与提前 3 天判定；两段合计价 = 两段单程总价相加，计 2 个航段。页面不核实两段之间的衔接时间与当天实际航班，订票前在 App 里逐段确认。";
+    ? "中转按两段或三段目录航线拼接：每段单独按适用日期与提前 3 天判定；合计价 = 各段单程总价相加，一次中转计 2 个航段、二次中转计 3 个航段。页面不核实各段之间的衔接时间与当天实际航班，订票前在 App 里逐段确认。"
+    : "中转按两段或三段目录航线拼接：每段单独按时段、屏蔽日期与提前 3 天判定；合计价 = 各段单程总价相加，一次中转计 2 个航段、二次中转计 3 个航段。页面不核实各段之间的衔接时间与当天实际航班，订票前在 App 里逐段确认。";
   document.getElementById("howtoHainan").classList.toggle("hidden",key!=="hainan");
   document.getElementById("howtoLoong").classList.toggle("hidden",key!=="loong");
   document.getElementById("benefitHainan").classList.toggle("hidden",key!=="hainan");
